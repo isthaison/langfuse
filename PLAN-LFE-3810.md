@@ -45,6 +45,9 @@ Currently, the public API traces endpoint only supports basic filtering through 
 
 ## Implementation Plan
 
+**Important!** Start the development server before running tests.
+**Important!** Don't try to `curl` instead of running tests, run the tests.
+
 ### Phase 1: Schema & Types Enhancement
 
 **1.1 Update Public API Types**
@@ -124,8 +127,6 @@ will make working with imports / exports easier and cleaner.
 - Handle edge cases (empty filters, conflicting parameters)
 
 ### Phase 4: Testing
-
-**Important!** Start a development server before running tests.
 
 You can run tests with the following commands:
 - `cd` into the project root directory
