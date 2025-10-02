@@ -8,90 +8,118 @@ import type { FilterState } from "@langfuse/shared";
 describe("Filter Conversion Utilities", () => {
   describe("convertLegacyParamsToFilterState", () => {
     it("should convert empty params to empty FilterState", () => {
-      const params: LegacyTraceParams = {};
-      const result = convertLegacyParamsToFilterState(params);
+      const result = convertLegacyParamsToFilterState({});
       expect(result).toEqual([]);
     });
 
-    it("should convert userId to string filter", () => {
-      const params: LegacyTraceParams = { userId: "test-user" };
-      const result = convertLegacyParamsToFilterState(params);
-      expect(result).toEqual([
-        {
-          type: "string",
-          column: "userId",
-          operator: "=",
-          value: "test-user",
-        },
-      ]);
-    });
+    const singleParamTestCases = [
+      {
+        description: "userId to string filter",
+        params: { userId: "test-user" },
+        expected: [
+          {
+            type: "string",
+            column: "userId",
+            operator: "=",
+            value: "test-user",
+          },
+        ],
+      },
+      {
+        description: "name to string filter",
+        params: { name: "test-trace" },
+        expected: [
+          {
+            type: "string",
+            column: "name",
+            operator: "=",
+            value: "test-trace",
+          },
+        ],
+      },
+      {
+        description: "sessionId to string filter",
+        params: { sessionId: "session-123" },
+        expected: [
+          {
+            type: "string",
+            column: "sessionId",
+            operator: "=",
+            value: "session-123",
+          },
+        ],
+      },
+      {
+        description: "version to string filter",
+        params: { version: "1.0" },
+        expected: [
+          { type: "string", column: "version", operator: "=", value: "1.0" },
+        ],
+      },
+      {
+        description: "release to string filter",
+        params: { release: "v1.0.0" },
+        expected: [
+          { type: "string", column: "release", operator: "=", value: "v1.0.0" },
+        ],
+      },
+      {
+        description: "single tag to array options filter",
+        params: { tags: "production" },
+        expected: [
+          {
+            type: "arrayOptions",
+            column: "tags",
+            operator: "any of",
+            value: ["production"],
+          },
+        ],
+      },
+      {
+        description: "multiple tags to array options filter",
+        params: { tags: ["production", "important"] },
+        expected: [
+          {
+            type: "arrayOptions",
+            column: "tags",
+            operator: "any of",
+            value: ["production", "important"],
+          },
+        ],
+      },
+      {
+        description: "single environment to string options filter",
+        params: { environment: "production" },
+        expected: [
+          {
+            type: "stringOptions",
+            column: "environment",
+            operator: "any of",
+            value: ["production"],
+          },
+        ],
+      },
+      {
+        description: "multiple environments to string options filter",
+        params: { environment: ["production", "staging"] },
+        expected: [
+          {
+            type: "stringOptions",
+            column: "environment",
+            operator: "any of",
+            value: ["production", "staging"],
+          },
+        ],
+      },
+    ] as const;
 
-    it("should convert name to string filter", () => {
-      const params: LegacyTraceParams = { name: "test-trace" };
-      const result = convertLegacyParamsToFilterState(params);
-      expect(result).toEqual([
-        {
-          type: "string",
-          column: "name",
-          operator: "=",
-          value: "test-trace",
-        },
-      ]);
-    });
-
-    it("should convert single tag to array options filter", () => {
-      const params: LegacyTraceParams = { tags: "production" };
-      const result = convertLegacyParamsToFilterState(params);
-      expect(result).toEqual([
-        {
-          type: "arrayOptions",
-          column: "tags",
-          operator: "any of",
-          value: ["production"],
-        },
-      ]);
-    });
-
-    it("should convert multiple tags to array options filter", () => {
-      const params: LegacyTraceParams = { tags: ["production", "important"] };
-      const result = convertLegacyParamsToFilterState(params);
-      expect(result).toEqual([
-        {
-          type: "arrayOptions",
-          column: "tags",
-          operator: "any of",
-          value: ["production", "important"],
-        },
-      ]);
-    });
-
-    it("should convert single environment to string options filter", () => {
-      const params: LegacyTraceParams = { environment: "production" };
-      const result = convertLegacyParamsToFilterState(params);
-      expect(result).toEqual([
-        {
-          type: "stringOptions",
-          column: "environment",
-          operator: "any of",
-          value: ["production"],
-        },
-      ]);
-    });
-
-    it("should convert multiple environments to string options filter", () => {
-      const params: LegacyTraceParams = {
-        environment: ["production", "staging"],
-      };
-      const result = convertLegacyParamsToFilterState(params);
-      expect(result).toEqual([
-        {
-          type: "stringOptions",
-          column: "environment",
-          operator: "any of",
-          value: ["production", "staging"],
-        },
-      ]);
-    });
+    it.each(singleParamTestCases)(
+      "should convert $description",
+      ({ params, expected }) => {
+        const result = convertLegacyParamsToFilterState(params);
+        expect(result).toEqual(expected);
+      },
+    );
 
     it("should convert timestamps to datetime filters", () => {
       const fromTime = "2024-01-01T00:00:00Z";
@@ -154,56 +182,64 @@ describe("Filter Conversion Utilities", () => {
   });
 
   describe("mergeFilters", () => {
-    it("should return legacy filters when no advanced filter provided", () => {
-      const legacyParams: LegacyTraceParams = { userId: "test-user" };
-      const result = mergeFilters(legacyParams);
+    const mergeTestCases = [
+      {
+        description:
+          "should return legacy filters when no advanced filter provided",
+        legacyParams: { userId: "test-user" },
+        advancedFilter: undefined,
+        expected: [
+          {
+            type: "string",
+            column: "userId",
+            operator: "=",
+            value: "test-user",
+          },
+        ],
+      },
+      {
+        description:
+          "should return legacy filters when empty advanced filter provided",
+        legacyParams: { userId: "test-user" },
+        advancedFilter: [],
+        expected: [
+          {
+            type: "string",
+            column: "userId",
+            operator: "=",
+            value: "test-user",
+          },
+        ],
+      },
+      {
+        description: "should prioritize advanced filter over legacy params",
+        legacyParams: { userId: "legacy-user" },
+        advancedFilter: [
+          {
+            type: "string",
+            column: "userId",
+            operator: "=",
+            value: "advanced-user",
+          },
+        ],
+        expected: [
+          {
+            type: "string",
+            column: "userId",
+            operator: "=",
+            value: "advanced-user",
+          },
+        ],
+      },
+    ] as const;
 
-      expect(result).toEqual([
-        {
-          type: "string",
-          column: "userId",
-          operator: "=",
-          value: "test-user",
-        },
-      ]);
-    });
-
-    it("should return legacy filters when empty advanced filter provided", () => {
-      const legacyParams: LegacyTraceParams = { userId: "test-user" };
-      const result = mergeFilters(legacyParams, []);
-
-      expect(result).toEqual([
-        {
-          type: "string",
-          column: "userId",
-          operator: "=",
-          value: "test-user",
-        },
-      ]);
-    });
-
-    it("should prioritize advanced filter over legacy params", () => {
-      const legacyParams: LegacyTraceParams = { userId: "legacy-user" };
-      const advancedFilter: FilterState = [
-        {
-          type: "string",
-          column: "userId",
-          operator: "=",
-          value: "advanced-user",
-        },
-      ];
-
-      const result = mergeFilters(legacyParams, advancedFilter);
-
-      expect(result).toEqual([
-        {
-          type: "string",
-          column: "userId",
-          operator: "=",
-          value: "advanced-user",
-        },
-      ]);
-    });
+    it.each(mergeTestCases)(
+      "$description",
+      ({ legacyParams, advancedFilter, expected }) => {
+        const result = mergeFilters(legacyParams, advancedFilter);
+        expect(result).toEqual(expected);
+      },
+    );
 
     it("should merge non-conflicting filters", () => {
       const legacyParams: LegacyTraceParams = {
